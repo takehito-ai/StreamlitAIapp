@@ -1,11 +1,9 @@
 
-import tiktoken
 import streamlit as st
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-# models
-from langchain_openai import ChatOpenAI
 
 try:
     from dotenv import load_dotenv
@@ -16,129 +14,53 @@ except ImportError:
     warnings.warn("dotenv not found. Please make sure to set your environment variables manually.", ImportWarning)
 
 
-MODEL_PRICES = {
-    "input": {
-        "gpt-3.5-turbo": 0.5 / 1_000_000,
-        "gpt-4o": 5 / 1_000_000,
-
-    },
-    "output": {
-        "gpt-3.5-turbo": 1.5 / 1_000_000,
-        "gpt-4o": 15 / 1_000_000,
-
-    }
-}
-
-
-def init_page():
+def main():
     st.set_page_config(
         page_title="My Great ChatGPT",
         page_icon="🤗"
     )
     st.header("My Great ChatGPT 🤗")
-    st.sidebar.title("Options")
 
-
-def init_messages():
-    clear_button = st.sidebar.button("Clear Conversation", key="clear")
-    # clear_button が押された場合や message_history がまだ存在しない場合に初期化
-    if clear_button or "message_history" not in st.session_state:
+    # チャット履歴の初期化: message_history がなければ作成
+    if "message_history" not in st.session_state:
         st.session_state.message_history = [
+            # System Prompt を設定 ('system' はSystem Promptを意味する)
             ("system", "You are a helpful assistant.")
         ]
 
+    # ChatGPTに質問を与えて回答を取り出す(パースする)処理を作成 (1.-4.の処理)
+    # 1. ChatGPTのモデルを呼び出すように設定
+    #    (デフォルトではGPT-3.5 Turboが呼ばれる)
+    llm = ChatOpenAI(temperature=0)
 
-def select_model():
-    # スライダーを追加し、temperatureを0から2までの範囲で選択可能にする
-    # 初期値は0.0、刻み幅は0.01とする
-    temperature = st.sidebar.slider(
-        "Temperature:", min_value=0.0, max_value=2.0, value=0.0, step=0.01)
-
-    models = ("GPT-3.5", "GPT-4", "Claude 3.5 Sonnet", "Gemini 1.5 Pro")
-    model = st.sidebar.radio("Choose a model:", models)
-    if model == "GPT-3.5":
-        st.session_state.model_name = "gpt-3.5-turbo"
-        return ChatOpenAI(
-            temperature=temperature,
-            model_name=st.session_state.model_name
-        )
-    elif model == "GPT-4":
-        st.session_state.model_name = "gpt-4o"
-        return ChatOpenAI(
-            temperature=temperature,
-            model_name=st.session_state.model_name
-        )
-
-
-def init_chain():
-    st.session_state.llm = select_model()
+    # 2. ユーザーの質問を受け取り、ChatGPTに渡すためのテンプレートを作成
+    #    テンプレートには過去のチャット履歴を含めるように設定
     prompt = ChatPromptTemplate.from_messages([
         *st.session_state.message_history,
         ("user", "{user_input}")  # ここにあとでユーザーの入力が入る
     ])
+
+    # 3. ChatGPTの返答をパースするための処理を呼び出し
     output_parser = StrOutputParser()
-    return prompt | st.session_state.llm | output_parser
 
-
-def get_message_counts(text):
-        # Claude 3 はトークナイザーを公開していないので、tiktoken を使ってトークン数をカウント
-        # これは正確なトークン数ではないが、大体のトークン数をカウントすることができる
-    if "gpt" in st.session_state.model_name:
-        encoding = tiktoken.encoding_for_model(st.session_state.model_name)
-    else:
-        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")  # 仮のものを利用
-    return len(encoding.encode(text))
-
-
-def calc_and_display_costs():
-    output_count = 0
-    input_count = 0
-    for role, message in st.session_state.message_history:
-        # tiktoken でトークン数をカウント
-        token_count = get_message_counts(message)
-        if role == "ai":
-            output_count += token_count
-        else:
-            input_count += token_count
-
-    # 初期状態で System Message のみが履歴に入っている場合はまだAPIコールが行われていない
-    if len(st.session_state.message_history) == 1:
-        return
-
-    input_cost = MODEL_PRICES['input'][st.session_state.model_name] * input_count
-    output_cost = MODEL_PRICES['output'][st.session_state.model_name] * output_count
-
-    cost = output_cost + input_cost
-
-    st.sidebar.markdown("## Costs")
-    st.sidebar.markdown(f"**Total cost: ${cost:.5f}**")
-    st.sidebar.markdown(f"- Input cost: ${input_cost:.5f}")
-    st.sidebar.markdown(f"- Output cost: ${output_cost:.5f}")
-
-
-def main():
-    init_page()
-    init_messages()
-    chain = init_chain()
-
-    # チャット履歴の表示 (第2章から少し位置が変更になっているので注意)
-    for role, message in st.session_state.get("message_history", []):
-        st.chat_message(role).markdown(message)
+    # 4. ユーザーの質問をChatGPTに渡し、返答を取り出す連続的な処理(chain)を作成
+    #    各要素を | (パイプ) でつなげて連続的な処理を作成するのがLCELの特徴
+    chain = prompt | llm | output_parser
 
     # ユーザーの入力を監視
     if user_input := st.chat_input("聞きたいことを入力してね！"):
-        st.chat_message('user').markdown(user_input)
+        with st.spinner("ChatGPT is typing ..."):
+            response = chain.invoke({"user_input": user_input})
 
-        # LLMの返答を Streaming 表示する
-        with st.chat_message('ai'):
-            response = st.write_stream(chain.stream({"user_input": user_input}))
-
-        # チャット履歴に追加
+        # ユーザーの質問を履歴に追加 ('user' はユーザーの質問を意味する)
         st.session_state.message_history.append(("user", user_input))
+
+        # ChatGPTの回答を履歴に追加 ('assistant' はChatGPTの回答を意味する)
         st.session_state.message_history.append(("ai", response))
 
-    # コストを計算して表示
-    calc_and_display_costs()
+    # チャット履歴の表示
+    for role, message in st.session_state.get("message_history", []):
+        st.chat_message(role).markdown(message)
 
 
 if __name__ == '__main__':

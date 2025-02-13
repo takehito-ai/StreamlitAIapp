@@ -5,8 +5,6 @@ from langchain_core.output_parsers import StrOutputParser
 
 # models
 from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 ###### dotenv を利用しない場合は消してください ######
 try:
@@ -38,16 +36,6 @@ def select_model(temperature=0):
         return ChatOpenAI(
             temperature=temperature,
             model_name="gpt-4o"
-        )
-    elif model == "Claude 3.5 Sonnet":
-        return ChatAnthropic(
-            temperature=temperature,
-            model_name="claude-3-5-sonnet-20240620"
-        )
-    elif model == "Gemini 1.5 Pro":
-        return ChatGoogleGenerativeAI(
-            temperature=temperature,
-            model="gemini-1.5-pro-latest"
         )
 
 

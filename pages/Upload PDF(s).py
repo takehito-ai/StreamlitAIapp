@@ -1,8 +1,11 @@
 import fitz  # PyMuPDF
 import streamlit as st
+import pydantic
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+import pydantic
 
 try:
     from dotenv import load_dotenv

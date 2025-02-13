@@ -1,1 +1,6 @@
-".env" 
+**/__pycache__/
+*.pkl
+*.pickle
+**/.env
+**/secrets.toml
+**/.DS_Store

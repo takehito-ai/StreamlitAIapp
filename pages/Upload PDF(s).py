@@ -68,7 +68,7 @@ def build_vector_store(pdf_text):
             # LangChain の Document Loader を利用した場合は `from_documents` にする
             st.session_state.vectorstore = FAISS.from_texts(
                 pdf_text,
-                OpenAIEmbeddings(model="text-embedding-3-small")
+                OpenAIEmbeddings(model="text-embedding-ada-002")
             )
 
             # FAISSのデフォルト設定はL2距離となっている

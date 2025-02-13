@@ -1,5 +1,4 @@
 import streamlit as st
-import pydantic
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
@@ -9,14 +8,14 @@ from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 
+###### dotenv を利用しない場合は消してください ######
 try:
     from dotenv import load_dotenv
-    env_path = r"C:\Users\kimut\Documents\PythonScript\LangChain\.env.dockerfile"
-    load_dotenv(dotenv_path=env_path)
+    load_dotenv()
 except ImportError:
     import warnings
     warnings.warn("dotenv not found. Please make sure to set your environment variables manually.", ImportWarning)
-
+################################################
 
 
 def init_page():
@@ -28,7 +27,7 @@ def init_page():
 
 
 def select_model(temperature=0):
-    models = ("GPT-3.5", "GPT-4")
+    models = ("GPT-3.5", "GPT-4", "Claude 3.5 Sonnet", "Gemini 1.5 Pro")
     model = st.sidebar.radio("Choose a model:", models)
     if model == "GPT-3.5":
         return ChatOpenAI(
@@ -40,7 +39,16 @@ def select_model(temperature=0):
             temperature=temperature,
             model_name="gpt-4o"
         )
-
+    elif model == "Claude 3.5 Sonnet":
+        return ChatAnthropic(
+            temperature=temperature,
+            model_name="claude-3-5-sonnet-20240620"
+        )
+    elif model == "Gemini 1.5 Pro":
+        return ChatGoogleGenerativeAI(
+            temperature=temperature,
+            model="gemini-1.5-pro-latest"
+        )
 
 
 def init_qa_chain():

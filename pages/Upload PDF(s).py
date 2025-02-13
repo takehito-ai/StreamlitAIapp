@@ -1,20 +1,17 @@
 import fitz  # PyMuPDF
 import streamlit as st
-import pydantic
 from langchain_community.vectorstores import FAISS
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-import pydantic
-
+###### dotenv を利用しない場合は消してください ######
 try:
     from dotenv import load_dotenv
-    env_path = r"C:\Users\kimut\Documents\PythonScript\LangChain\.env.dockerfile"
-    load_dotenv(dotenv_path=env_path)
+    load_dotenv()
 except ImportError:
     import warnings
     warnings.warn("dotenv not found. Please make sure to set your environment variables manually.", ImportWarning)
-
+################################################
 
 
 def init_page():
@@ -71,7 +68,7 @@ def build_vector_store(pdf_text):
             # LangChain の Document Loader を利用した場合は `from_documents` にする
             st.session_state.vectorstore = FAISS.from_texts(
                 pdf_text,
-                OpenAIEmbeddings(model="text-embedding-ada-002")
+                OpenAIEmbeddings(model="text-embedding-3-small")
             )
 
             # FAISSのデフォルト設定はL2距離となっている
